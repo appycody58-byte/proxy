@@ -1,0 +1,34 @@
+# 💥 POWER PRODUCTION systemd unit for WhatsApp Proxy
+# Drop this on any modern VPS (Ubuntu/Debian/CentOS) and the proxy will
+# start automatically on every boot and survive crashes.
+
+[Unit]
+Description=WhatsApp Chat Proxy (POWER FORK)
+Documentation=https://github.com/appycody58-byte/proxy
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# >>> CHANGE THIS PATH to where you cloned the repo <<<
+WorkingDirectory=/opt/whatsapp-proxy/proxy/ops
+
+# Prefer the production compose file
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
+ExecReload=/usr/bin/docker compose -f docker-compose.prod.yml up -d --force-recreate
+
+# Restart policy for the service itself
+Restart=on-failure
+RestartSec=10s
+
+# Nice + resource control
+Nice=-5
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

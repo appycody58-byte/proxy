@@ -1,0 +1,64 @@
+# 💥 POWER PRODUCTION docker-compose for WhatsApp Proxy
+# Optimized for real VPS deployment – higher limits, logging, resource control, auto-restart
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml logs -f
+
+version: '3.8'
+
+services:
+  whatsapp_proxy:
+    container_name: whatsapp_proxy
+    image: facebook/whatsapp_proxy:latest          # Prefer official pre-built (fastest)
+    # Uncomment the next two lines if you want to build from this POWER FORK instead:
+    # build:
+    #   context: ../
+    #   dockerfile: Dockerfile
+    restart: unless-stopped
+    network_mode: host                             # Best performance + simplest networking on VPS
+    # Alternative (if you prefer bridge networking):
+    # ports:
+    #   - "80:80"
+    #   - "443:443"
+    #   - "5222:5222"
+    #   - "8199:8199"
+    #   - "8080:8080"
+    #   - "8443:8443"
+    #   - "8222:8222"
+    #   - "587:587"
+    #   - "7777:7777"
+    environment:
+      - TZ=UTC
+    volumes:
+      - proxy_certs:/home/haproxy/certs             # Persist generated certs across restarts
+      - ./logs:/var/log/haproxy                    # Optional: host log dir
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "bash", "/usr/local/bin/healthcheck.sh"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:                                        # Resource limits (works with swarm; ignored by plain compose but good documentation)
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: false                               # HAProxy needs write for certs
+    tmpfs:
+      - /tmp
+      - /run
+
+volumes:
+  proxy_certs:
+    driver: local
